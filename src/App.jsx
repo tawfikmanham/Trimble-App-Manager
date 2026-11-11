@@ -69,6 +69,9 @@ export function App() {
   const [page, setPage] = useState(route);
   const [expanded, setExpanded] = useState(false);
   const [account, setAccount] = useState(false);
+  const [accountSection, setAccountSection] = useState(null);
+  const accountArea = React.useRef(null);
+  const accountButton = React.useRef(null);
   const [themes, setThemes] = useState(loadThemes);
   const [notice, setNotice] = useState(null);
   const [noticeHovered, setNoticeHovered] = useState(false);
@@ -89,6 +92,23 @@ export function App() {
     const timer = setTimeout(() => setNotice(null), 5000);
     return () => clearTimeout(timer);
   }, [notice, noticeHovered, noticeFocused]);
+  useEffect(() => {
+    if (!account) return;
+    function closeOnOutsidePress(event) {
+      if (!accountArea.current?.contains(event.target)) setAccount(false);
+    }
+    function closeOnEscape(event) {
+      if (event.key !== 'Escape') return;
+      setAccount(false);
+      if (accountArea.current?.contains(document.activeElement)) accountButton.current?.focus();
+    }
+    document.addEventListener('pointerdown', closeOnOutsidePress);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsidePress);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [account]);
   const editing = page === 'create' || page.startsWith('edit/');
   const theme = page.startsWith('edit/') ? themes.find(item => String(item.id) === page.split('/')[1]) : undefined;
   const title = editing ? (theme ? 'Edit Theme' : 'Create New Theme') : navigation.find(([, key]) => key === page)?.[0] || 'Welcome';
@@ -113,7 +133,36 @@ export function App() {
   }
 
   return <>
-    <header className="top"><button className="icon menu-toggle" aria-label="Toggle navigation" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}><Icon name="menu" /></button><strong>Trimble App Manager</strong><button className="icon account" aria-label="Account" aria-expanded={account} onClick={() => setAccount(!account)}><Icon name="account" /></button>{account && <div className="account-menu">Local demo</div>}</header>
+    <header className="top">
+      <button className="icon menu-toggle" aria-label="Toggle navigation" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}><Icon name="menu" /></button>
+      <strong>Trimble App Manager</strong>
+      <div className="account" ref={accountArea}>
+        <button ref={accountButton} className="icon" aria-label="Account menu" aria-expanded={account} aria-controls="account-panel" onClick={() => {
+          setAccountSection(null);
+          setAccount(!account);
+        }}><Icon name="account" /></button>
+        <div id="account-panel" className="account-menu" hidden={!account}>
+          <button type="button" className="account-option" aria-expanded={accountSection === 'profile'} aria-controls="account-profile" onClick={() => setAccountSection(accountSection === 'profile' ? null : 'profile')}>
+            <Icon name="account" size={18} />
+            My account
+          </button>
+          <div id="account-profile" className="account-details" hidden={accountSection !== 'profile'}>
+            <dl>
+              <div><dt>Profile</dt><dd>Alex Morgan</dd></div>
+              <div><dt>Organization</dt><dd>Demo Fleet</dd></div>
+              <div><dt>Role</dt><dd>Fleet administrator</dd></div>
+            </dl>
+          </div>
+          <button type="button" className="account-option" aria-expanded={accountSection === 'settings'} aria-controls="account-settings" onClick={() => setAccountSection(accountSection === 'settings' ? null : 'settings')}>
+            <Icon name="settings" size={18} />
+            Settings
+          </button>
+          <div id="account-settings" className="account-details" hidden={accountSection !== 'settings'}>
+            <label><input type="checkbox" checked={expanded} onChange={event => setExpanded(event.target.checked)} /> Show navigation labels</label>
+          </div>
+        </div>
+      </div>
+    </header>
     <div className="subhead">{editing && <button className="icon back" aria-label="Back to Themes" onClick={() => go('themes')}><Icon name="back" /></button>}<h1>{title}</h1></div>
     <div className="shell">
       <nav className={expanded ? 'rail expanded' : 'rail'} aria-label="Main navigation">
@@ -140,7 +189,7 @@ export function App() {
       {notice && <div className={`toast toast-${notice.tone}`}
         onMouseEnter={() => setNoticeHovered(true)} onMouseLeave={() => setNoticeHovered(false)}
         onFocus={() => setNoticeFocused(true)} onBlur={() => setNoticeFocused(false)}>
-        <Icon name={notice.tone === 'success' ? 'success' : 'info'} />
+        <Icon name={notice.tone === 'success' ? 'success' : 'info-outline'} />
         <p>{notice.message}</p>
         <button type="button" className="icon" aria-label="Dismiss notification" onClick={() => setNotice(null)}><Icon name="close" size={18} /></button>
       </div>}
@@ -353,7 +402,7 @@ function Editor({ theme, save }) {
       </div>}
       {tab === 'Wallpaper' && <WallpaperSettings draft={draft} select={selectWallpaper} upload={uploadWallpaper} feedback={wallpaperFeedback} loading={wallpaperLoading} />}
       {tab.endsWith('Screen') && <>
-        <h2>Widgets in the {tab.replace('Screen', 'screen')} <span className="info" title="Select a layout, then choose or drag widgets into the preview."><Icon name="info" size={18} /></span></h2>
+        <h2>Widgets in the {tab.replace('Screen', 'screen')} <span className="info" title="Select a layout, then choose or drag widgets into the preview."><Icon name="info-outline" size={18} /></span></h2>
         <div className="layout-options" aria-label="Widget layouts">{layouts.map((label, index) => <button type="button" key={label} aria-label={label} title={label} aria-pressed={index === screen.layout} onClick={() => { updateScreen({ layout: index }); setTarget(null); }}><Icon name={layoutIcons[index]} /></button>)}</div>
         <div className="editor-grid">
           <Tablet driving={tab === 'Driving Screen'} wallpaper={tab === 'Home Screen' ? draft : undefined}>
