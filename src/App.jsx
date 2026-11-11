@@ -9,9 +9,24 @@ function Icon({ name, size = 20, className }) {
 }
 
 const layoutIcons = ['single', 'columns', 'wideTop', 'four', 'six'];
-const widgetIcons = ['', 'speed', 'folder', 'globe'];
 const layouts = ['Single', 'Two columns', 'Wide top', 'Four tiles', 'Six tiles'];
-const widgetNames = ['DND_AutoWidget_Widget234', 'HOS MPG', 'MyMedia - driving mode', 'OER Button Driving Screen', ...Array(8).fill('POST Test Widget')];
+
+// Saved layouts store numeric widget IDs. Keep the catalog order stable.
+const widgets = [
+  { name: 'DND_AutoWidget_Widget234' },
+  { name: 'HOS MPG', icon: 'speed' },
+  { name: 'MyMedia - driving mode', icon: 'folder' },
+  { name: 'OER Button Driving Screen', icon: 'globe' },
+  ...Array.from({ length: 8 }, () => ({ name: 'POST Test Widget' })),
+  { name: 'Amazon Music', icon: 'folder', appearance: 'music', featured: true },
+  { name: 'Audible', icon: 'folder', appearance: 'audio', featured: true },
+  { name: 'Driver Bypass', icon: 'navigation', featured: true },
+  { name: 'Driver Media', icon: 'folder', featured: true },
+  { name: 'Driving Screen', icon: 'speed', featured: true },
+  { name: 'ELD', icon: 'hours', featured: true },
+].map((widget, id) => ({ ...widget, id }));
+const libraryWidgets = [...widgets.filter(widget => widget.featured), ...widgets.filter(widget => !widget.featured)];
+
 const sampleThemes = [
   ['Regional Delivery', 'Route guidance, stop details, and delivery shortcuts for regional drivers.', 'Published'],
   ['Yard Operations', 'Trailer moves, yard checklists, and dispatch contacts for depot tablets.', 'Not published'],
@@ -251,22 +266,72 @@ function ThemeList({ themes, update, notify }) {
   </section>;
 }
 
+function startWidgetDrag(event, id) {
+  const row = event.currentTarget;
+  const bounds = row.getBoundingClientRect();
+  const preview = row.cloneNode(true);
+  preview.classList.add('widget-drag-preview');
+  preview.setAttribute('aria-hidden', 'true');
+  preview.tabIndex = -1;
+  preview.style.width = `${bounds.width}px`;
+  document.body.append(preview);
+
+  event.dataTransfer.setData('text/plain', String(id));
+  event.dataTransfer.setDragImage(preview, event.clientX - bounds.left, event.clientY - bounds.top);
+  requestAnimationFrame(() => preview.remove());
+}
+
 function WidgetLibrary({ choose, selected, searchRef }) {
   const [query, setQuery] = useState('');
-  const matching = widgetNames.map((name, id) => ({ name, id })).filter(widget => widget.name.toLowerCase().includes(query.trim().toLowerCase()));
-  return <aside className="library" aria-label="Widget library" ref={searchRef}><Search value={query} change={setQuery} label="Search Widget" />
-    <div className="widget-list">{matching.map(({ name, id }) => <button type="button" key={id} disabled={!choose} className="widget-option" aria-pressed={choose ? selected === id : undefined} draggable={Boolean(choose)} onDragStart={event => event.dataTransfer.setData('text/plain', String(id))} onClick={() => choose?.(id)}><span className={`widget-icon widget-${id}`}>{widgetIcons[id] && <Icon name={widgetIcons[id]} size={26} />}</span>{name}</button>)}{!matching.length && <p className="empty">No matching widgets</p>}</div>
+  const search = query.trim().toLowerCase();
+  const matching = libraryWidgets.filter(widget => widget.name.toLowerCase().includes(search));
+  return <aside className="library" aria-label="Widget library" ref={searchRef}>
+    <Search value={query} change={setQuery} label="Search widgets" />
+    <div className="widget-list">
+      {matching.map(({ name, id, featured, icon, appearance = '' }) => {
+        return <button type="button" key={id} disabled={!choose} className="widget-option" aria-pressed={choose ? selected === id : undefined} draggable={Boolean(choose)} onDragStart={event => startWidgetDrag(event, id)} onClick={() => choose?.(id)}>
+          <span className={`widget-icon ${featured ? `widget-featured ${appearance}` : `widget-${id}`}`}>{icon && <Icon name={icon} size={18} />}</span>
+          {name}
+        </button>;
+      })}
+      {!matching.length && <p className="empty">No matching widgets</p>}
+    </div>
   </aside>;
 }
 
 const wallpaperPresets = [['Midnight', 'midnight'], ['Slate', 'slate'], ['Night lights', 'night-lights']];
 
-function Tablet({ driving = false, wallpaper, children }) {
+function OrientationOptions({ orientation, change }) {
+  return <div className="layout-options orientation-options" role="group" aria-label="Tablet orientation">
+    {['Landscape', 'Portrait'].map(label => <button key={label} type="button" title={label} aria-label={label} aria-pressed={orientation === label} onClick={() => change(label)}>
+      <Icon name="devices" className={label === 'Landscape' ? 'orientation-landscape' : undefined} />
+    </button>)}
+  </div>;
+}
+
+function Tablet({ wallpaper, orientation, driving, children }) {
   const preset = wallpaperPresets.find(([name]) => name === wallpaper?.wallpaper)?.[1] ?? '';
   const custom = wallpaper?.wallpaper === 'Custom' ? wallpaper.wallpaperImage : null;
-  return <div className={`tablet ${driving ? 'tablet-driving' : 'tablet-landscape'}`}>
-    <div className={`tablet-display ${preset}`} style={custom ? { backgroundImage: `url("${custom.src}")` } : undefined}>
-      {children}
+  return <div className="tablet-stage">
+    <div className={`tablet ${orientation === 'Portrait' ? 'tablet-portrait' : ''}`}>
+      <div className="tablet-hardware" aria-hidden="true">
+        <span className="tablet-key" />
+        <span className="tablet-key" />
+      </div>
+      <span className="tablet-key-power" aria-hidden="true" />
+      <div className={`tablet-display ${preset}`} style={custom ? { backgroundImage: `url("${custom.src}")` } : undefined}>
+        <div className="tablet-status" aria-hidden="true">
+          <span>17:48</span>
+          <Icon name="navigation" size={9} />
+          <span className="tablet-status-indicators">
+            <Icon name="wifi" size={9} />
+            <Icon name="signal-cellular" size={9} />
+            <Icon name="battery" size={9} />
+          </span>
+        </div>
+        {driving && <div className="driving-status"><strong>03:27</strong><span>Driving time left</span><span className="driver-avatar" aria-label="Demo driver">TM</span></div>}
+        <div className="tablet-content">{children}</div>
+      </div>
     </div>
   </div>;
 }
@@ -289,13 +354,12 @@ async function prepareWallpaper(file) {
   }
 }
 
-function WallpaperSettings({ draft, select, upload, feedback, loading }) {
+function WallpaperSettings({ draft, select, upload, feedback, loading, orientation }) {
   const fileInput = React.useRef(null);
   const [dragging, setDragging] = useState(false);
   return <div className="editor-grid wallpaper-grid">
     <section aria-label="Wallpaper preview">
-      <h2>Wallpaper Preview</h2>
-      <Tablet wallpaper={draft} />
+      <Tablet wallpaper={draft} orientation={orientation} />
     </section>
     <section aria-label="Wallpaper settings">
       <h2>Choose Wallpaper</h2>
@@ -330,6 +394,7 @@ function WallpaperSettings({ draft, select, upload, feedback, loading }) {
 
 function Editor({ theme, save }) {
   const [tab, setTab] = useState(theme ? 'Theme Details' : 'Driving Screen');
+  const [orientation, setOrientation] = useState('Landscape');
   const [draft, setDraft] = useState(() => ({ ...blank(), ...theme }));
   const [target, setTarget] = useState(null);
   const [error, setError] = useState(false);
@@ -400,24 +465,32 @@ function Editor({ theme, save }) {
           Default Theme
         </label>
       </div>}
-      {tab === 'Wallpaper' && <WallpaperSettings draft={draft} select={selectWallpaper} upload={uploadWallpaper} feedback={wallpaperFeedback} loading={wallpaperLoading} />}
-      {tab.endsWith('Screen') && <>
-        <h2>Widgets in the {tab.replace('Screen', 'screen')} <span className="info" title="Select a layout, then choose or drag widgets into the preview."><Icon name="info-outline" size={18} /></span></h2>
-        <div className="layout-options" aria-label="Widget layouts">{layouts.map((label, index) => <button type="button" key={label} aria-label={label} title={label} aria-pressed={index === screen.layout} onClick={() => { updateScreen({ layout: index }); setTarget(null); }}><Icon name={layoutIcons[index]} /></button>)}</div>
+      {tab !== 'Theme Details' && <>
+        <h2 className="preview-heading">{tab === 'Wallpaper' ? 'Wallpaper preview' : <>
+          Add widgets to your {tab.toLowerCase()} <span className="info" title="Select a layout, then choose or drag widgets into the preview."><Icon name="info-outline" size={18} /></span>
+        </>}</h2>
+        <div className="preview-controls">
+          {tab !== 'Wallpaper' && <div className="layout-options" role="group" aria-label="Widget layouts">
+            {layouts.map((label, index) => <button type="button" key={label} aria-label={label} title={label} aria-pressed={index === screen.layout} onClick={() => { updateScreen({ layout: index }); setTarget(null); }}><Icon name={layoutIcons[index]} /></button>)}
+          </div>}
+          <OrientationOptions orientation={orientation} change={setOrientation} />
+        </div>
+      </>}
+      {tab === 'Wallpaper' && <WallpaperSettings draft={draft} select={selectWallpaper} upload={uploadWallpaper} feedback={wallpaperFeedback} loading={wallpaperLoading} orientation={orientation} />}
+      {tab.endsWith('Screen') &&
         <div className="editor-grid">
-          <Tablet driving={tab === 'Driving Screen'} wallpaper={tab === 'Home Screen' ? draft : undefined}>
-            {tab === 'Driving Screen' && <div className="driving-nav"><div><Icon name="summary" />SUMMARY</div><div><Icon name="hours" />HOS</div><div><Icon name="navigation" />NAVIGATION</div></div>}
+          <Tablet orientation={orientation} driving={tab === 'Driving Screen'} wallpaper={tab === 'Home Screen' ? draft : undefined}>
+            {tab === 'Driving Screen' && <div className="driving-nav"><div><Icon name="home" />Home</div><div><Icon name="hours" />HOS</div><div><Icon name="navigation" />Navigation</div></div>}
             <div className={`slots layout-${screen.layout}`}>{Array.from({ length: slotCount }, (_, i) => {
-              const widget = screen.slots[i];
-              return <div className={`slot ${i === target ? 'target' : ''}`} key={i} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); const value = event.dataTransfer.getData('text/plain'); if (/^\d+$/.test(value) && widgetNames[Number(value)]) assign(Number(value), i); }}>
-                <button type="button" onClick={() => { setTarget(i); library.current?.querySelector('input')?.focus(); }}><Icon name={widget == null ? 'upload' : 'widgets'} />{widget == null ? 'Add Widget' : widgetNames[widget]}</button>
-                {widget != null && <button className="remove" type="button" aria-label={`Remove ${widgetNames[widget]}`} onClick={() => assign(null, i)}><Icon name="close" size={16} /></button>}
+              const widget = widgets[screen.slots[i]];
+              return <div className={`slot ${i === target ? 'target' : ''}`} key={i} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); const value = event.dataTransfer.getData('text/plain'); if (/^\d+$/.test(value) && widgets[Number(value)]) assign(Number(value), i); }}>
+                <button type="button" onClick={() => { setTarget(i); library.current?.querySelector('input')?.focus(); }}><Icon name={widget == null ? 'add' : 'widgets'} />{widget == null ? 'Add Widget' : widget.name}</button>
+                {widget != null && <button className="remove" type="button" aria-label={`Remove ${widget.name}`} onClick={() => assign(null, i)}><Icon name="close" size={16} /></button>}
               </div>;
             })}</div>
           </Tablet>
           <WidgetLibrary key={tab} choose={assign} selected={screen.slots[target ?? 0]} searchRef={library} />
-        </div>
-      </>}
+        </div>}
     </section>
   </form>;
 }
