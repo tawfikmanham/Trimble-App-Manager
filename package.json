@@ -1,0 +1,21 @@
+{
+  "name": "trimble-app-manager",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/prepare-sites-build.mjs",
+    "preview": "vite preview",
+    "test:sites": "node --test tests/sites-worker.test.mjs"
+  },
+  "dependencies": {
+    "react": "https://registry.npmjs.org/react/-/react-19.2.4.tgz",
+    "react-dom": "https://registry.npmjs.org/react-dom/-/react-dom-19.2.4.tgz",
+    "vite": "https://registry.npmjs.org/vite/-/vite-5.4.21.tgz"
+  },
+  "overrides": {
+    "rollup": "4.55.3",
+    "postcss": "8.5.6"
+  }
+}
