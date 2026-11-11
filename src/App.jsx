@@ -12,9 +12,55 @@ const layoutIcons = ['single', 'columns', 'wideTop', 'four', 'six'];
 const widgetIcons = ['', 'speed', 'folder', 'globe'];
 const layouts = ['Single', 'Two columns', 'Wide top', 'Four tiles', 'Six tiles'];
 const widgetNames = ['DND_AutoWidget_Widget234', 'HOS MPG', 'MyMedia - driving mode', 'OER Button Driving Screen', ...Array(8).fill('POST Test Widget')];
-const names = ['Copy of Theme test', 'DEFAULT_CREATE_THEME', 'DEFAULT_THEME_FROM_CREATE', 'Delete-theme', 'Edited Theme', 'HIhiii', 'my-test-widget', 'sample Theme', 'tam', 'test', 'Test Dashboard', 'Test Default', 'Test Fleet', 'Test Home', 'Test Layout', 'Test Navigation', 'Test Operations', 'Test Theme 2', 'Training Theme', 'Weekend Theme'];
-const descriptions = ['Desc', 'Not available', 'theme', 'Description', 'Hi - This theme is editedd', 'Not available', 'Not available', 'sample', 'testttt', 'teststststst'];
-const seed = names.map((name, id) => ({ id, name, description: descriptions[id] || 'Not available', type: id === 2 ? 'Default' : 'Custom', status: [0, 2, 3, 4].includes(id) ? 'Not published' : 'Action required' }));
+const sampleThemes = [
+  ['Regional Delivery', 'Route guidance, stop details, and delivery shortcuts for regional drivers.', 'Published'],
+  ['Yard Operations', 'Trailer moves, yard checklists, and dispatch contacts for depot tablets.', 'Not published'],
+  ['Standard Fleet', 'Default layout for fleet tablets with navigation, hours of service, and messages.', 'Published'],
+  ['Field Service', 'Work orders, asset details, and service forms for mobile technicians.', 'Not published'],
+  ['Long Haul', 'Driving view with route guidance, hours of service, and trip summaries.', 'Published'],
+  ['City Delivery', 'Compact layout for frequent stops, delivery confirmations, and customer notes.', 'Published'],
+  ['Driver Training', 'Practice layout with onboarding checklists and reference materials.', 'Not published'],
+  ['Depot Dispatch', 'Shift schedules, vehicle assignments, and driver messages for dispatchers.', 'Published'],
+  ['Night Shift', 'Low-light layout for overnight routes and depot handovers.', 'Not published'],
+  ['Vehicle Inspection', 'Pre-trip and post-trip inspection forms with defect reporting shortcuts.', 'Published'],
+  ['Construction Fleet', 'Site maps, equipment checks, and crew contacts for jobsite vehicles.', 'Not published'],
+  ['Cold Chain Delivery', 'Temperature checks, delivery windows, and exception reporting for refrigerated loads.', 'Not published'],
+  ['Linehaul Transfer', 'Terminal transfers, trailer assignments, and trip documents for linehaul drivers.', 'Published'],
+  ['Roadside Support', 'Breakdown reports, assistance contacts, and incident forms for drivers.', 'Not published'],
+  ['Rental Equipment', 'Equipment handover checklists, pickup details, and return forms.', 'Not published'],
+  ['Safety Review', 'Safety bulletins, incident reporting, and driver reference materials.', 'Published'],
+  ['Seasonal Routes', 'Temporary route shortcuts and dispatch contacts for peak delivery periods.', 'Not published'],
+  ['Weekend Coverage', 'Reduced set of dispatch and route tools for weekend operations.', 'Not published'],
+  ['Fleet Maintenance', 'Service schedules, open defects, and workshop contacts for fleet tablets.', 'Published'],
+  ['Local Pickup', 'Pickup schedules, collection notes, and proof-of-pickup shortcuts.', 'Not published'],
+];
+const seed = sampleThemes.map(([name, description, status], id) => ({
+  id, name, description, status, type: id === 2 ? 'Default' : 'Custom',
+}));
+
+const legacyNames = ['Copy of Theme test', 'DEFAULT_CREATE_THEME', 'DEFAULT_THEME_FROM_CREATE', 'Delete-theme', 'Edited Theme', 'HIhiii', 'my-test-widget', 'sample Theme', 'tam', 'test', 'Test Dashboard', 'Test Default', 'Test Fleet', 'Test Home', 'Test Layout', 'Test Navigation', 'Test Operations', 'Test Theme 2', 'Training Theme', 'Weekend Theme'];
+const legacyDescriptions = ['Desc', 'Not available', 'theme', 'Description', 'Hi - This theme is editedd', 'Not available', 'Not available', 'sample', 'testttt', 'teststststst'];
+
+function loadThemes() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('mobile-app-manager-themes'));
+    if (!Array.isArray(stored)) return seed;
+    return stored.map(theme => {
+      const sample = seed[theme.id];
+      if (!sample || theme.name !== legacyNames[theme.id]) return theme;
+      const legacyStatus = [0, 2, 3, 4].includes(theme.id) ? 'Not published' : 'Action required';
+      return {
+        ...theme,
+        name: sample.name,
+        description: theme.description === (legacyDescriptions[theme.id] || 'Not available') ? sample.description : theme.description,
+        status: theme.status === legacyStatus ? sample.status : theme.status,
+      };
+    });
+  } catch {
+    return seed;
+  }
+}
+
 const blank = () => ({ name: '', description: '', type: 'Custom', status: 'Not published', wallpaper: 'Midnight', screens: {} });
 const route = () => location.hash.slice(1) || 'home';
 const go = (page) => { location.hash = page; };
@@ -23,9 +69,7 @@ export function App() {
   const [page, setPage] = useState(route);
   const [expanded, setExpanded] = useState(false);
   const [account, setAccount] = useState(false);
-  const [themes, setThemes] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('mobile-app-manager-themes')) || seed; } catch { return seed; }
-  });
+  const [themes, setThemes] = useState(loadThemes);
   const [notice, setNotice] = useState(null);
   const [noticeHovered, setNoticeHovered] = useState(false);
   const [noticeFocused, setNoticeFocused] = useState(false);
