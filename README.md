@@ -1,6 +1,6 @@
 # Trimble App Manager
 
-A local web prototype for an organization’s device-management console. The supplied screenshots guided the Welcome screen, Themes table, and Driving Screen editor.
+Trimble App Manager is a web prototype for configuring how an organization’s tablets look and behave. Browse and edit themes, preview or upload wallpapers, and arrange widgets on the Home and Driving screens.
 
 ## Run locally
 
