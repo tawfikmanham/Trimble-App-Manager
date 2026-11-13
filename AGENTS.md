@@ -32,6 +32,8 @@ Use simple horizontal and vertical outlines for the tablet orientation controls.
 
 Keep a single default theme at the top of the Themes table. Truncate overflowing descriptions with a tooltip, and confirm deletions in a Modus-style dialog with a neutral completion toast.
 
+Give Cancel and Save or Create equal widths and heights in the theme editor.
+
 Use the same info panel on Home Screen and Driving Screen. Align its right edge with the info button and keep it within the editor on narrow screens. Include the preview device name and brief instructions for arranging and previewing widgets.
 
 Use the 8 px grid for widget search spacing. Set the panel radius to the search field radius plus its inset. Use an 8 px radius and 8 px inset for a 16 px panel radius.

@@ -347,7 +347,8 @@ tbody tr.selected:focus-within { background-color: #dbeaf5; }
 .tabs button { min-height: 50px; padding: 0 12px; border-bottom: 3px solid transparent; font-weight: 700; color: #4e4e50; white-space: nowrap; }
 .tabs button:first-child { padding-left: 4px; }
 .tabs button[aria-selected=true] { color: #00649d; }
-.editor-actions { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
+.editor-actions { display: grid; grid-template-columns: repeat(2, minmax(80px, 1fr)); gap: 8px; margin-inline-start: auto; }
+.editor-actions > button { min-block-size: 40px; }
 .editor-cancel { padding: 8px 11px; border: 1px solid #6a6e79; border-radius: 4px; color: #252633; }
 .editor-cancel:hover { background: #e2e3e9; }
 .primary { background: #00568b; color: white; border-radius: 4px; padding: 8px 11px; box-shadow: 0 2px 4px #0004; }
