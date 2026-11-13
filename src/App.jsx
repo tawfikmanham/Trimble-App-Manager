@@ -30,10 +30,10 @@ const widgets = [
   { name: 'Shift Schedule', icon: 'hours' },
   { name: 'Amazon Music', brand: 'amazon-music' },
   { name: 'Audible', brand: 'audible' },
-  { name: 'Instinct Weigh Station Bypass', brand: 'instinct-bypass', format: 'png', aliases: ['Drivewyze', 'PreClear', 'Driver Bypass'] },
-  { name: 'Driver Media', icon: 'folder', featured: true },
+  { name: 'Instinct Weigh Station Bypass', brand: 'trimble-apps/driver-bypass', aliases: ['Drivewyze', 'PreClear', 'Driver Bypass'] },
+  { name: 'Driver Media', brand: 'trimble-apps/driver-media', featured: true },
   { name: 'Driving Screen', icon: 'speed', featured: true, tile: 'launcher' },
-  { name: 'ELD', icon: 'hours', featured: true, tile: 'launcher' },
+  { name: 'ELD', brand: 'trimble-apps/eld', featured: true, tile: 'launcher' },
   { name: 'WhatsApp', brand: 'whatsapp' },
   { name: 'Google Maps', brand: 'google-maps' },
   { name: 'YouTube', brand: 'youtube' },
@@ -42,12 +42,12 @@ const widgets = [
   { name: 'Route Manifest', icon: 'folder', tile: 'dashboard' },
   { name: 'Weather', icon: 'weather', tile: 'dashboard' },
   { name: 'Roadside Inspection', icon: 'checklist', tile: 'launcher' },
-  { name: 'Workflow', icon: 'widgets', tile: 'launcher' },
-  { name: 'Inbox', icon: 'inbox', tile: 'launcher' },
+  { name: 'Workflow', brand: 'trimble-apps/workflow', tile: 'launcher' },
+  { name: 'Inbox', brand: 'trimble-apps/inbox', tile: 'launcher' },
   { name: 'Forms', icon: 'forms', tile: 'launcher' },
-  { name: 'HOS Assistant', icon: 'timer', tile: 'launcher' },
+  { name: 'HOS Assistant', brand: 'trimble-apps/hos-assistant', tile: 'launcher' },
   { name: 'Media', icon: 'media', tile: 'launcher' },
-  { name: 'OER', icon: 'recorder', tile: 'launcher' },
+  { name: 'OER', brand: 'trimble-apps/oer', tile: 'launcher' },
   { name: 'Adobe Acrobat', brand: 'adobe-acrobat' },
   { name: 'Driver Playbook', icon: 'truck', tile: 'launcher' },
   { name: 'Play Store', brand: 'play-store' },
@@ -66,7 +66,7 @@ const widgets = [
   { name: 'XPS File Browser', brand: 'xps-file-browser', format: 'png' },
 ].map((widget, id) => ({ ...widget, id }));
 const libraryWidgets = [
-  ...widgets.filter(widget => widget.brand),
+  ...widgets.filter(widget => widget.brand && !widget.featured && !widget.tile),
   ...widgets.filter(widget => widget.featured || widget.tile),
   ...widgets.filter(widget => !widget.brand && !widget.featured && !widget.tile),
 ];
@@ -388,15 +388,18 @@ function PublishGroupPicker({ groups, setGroups }) {
   </div>;
 }
 
-function ThemeActionDialog({ action, theme, close, confirm }) {
+function ThemeActionDialog({ action, theme, batch, close, confirm }) {
   const dialog = React.useRef(null);
   const cancel = React.useRef(null);
   const publishing = action === 'publish';
-  const [scope, setScope] = useState(theme.audience?.organization ? 'organization' : 'groups');
-  const [groups, setGroups] = useState(theme.audience?.groups ?? []);
+  const [scope, setScope] = useState(theme?.audience?.organization ? 'organization' : 'groups');
+  const [groups, setGroups] = useState(theme?.audience?.groups ?? []);
   const [failed, setFailed] = useState(false);
-  const currentAudience = audienceLabel(theme);
-  const isDefault = theme.type === 'Default';
+  const currentAudience = theme ? audienceLabel(theme) : '';
+  const isDefault = theme?.type === 'Default';
+  const deleting = action === 'delete';
+  const actionLabel = publishing ? 'Publish' : deleting ? 'Delete' : 'Unpublish';
+  const batchLabel = batch && `${batch.count} ${batch.count === 1 ? 'theme' : 'themes'}`;
 
   useLayoutEffect(() => {
     const element = dialog.current;
@@ -412,7 +415,7 @@ function ThemeActionDialog({ action, theme, close, confirm }) {
   return <dialog className="theme-dialog" ref={dialog} aria-labelledby="theme-dialog-title" aria-describedby="theme-dialog-description"
     onCancel={event => { event.preventDefault(); close(); }}>
     <header className="theme-dialog-header">
-      <h2 id="theme-dialog-title">{publishing ? 'Publish theme' : 'Delete theme'}</h2>
+      <h2 id="theme-dialog-title">{actionLabel} {batchLabel || 'theme'}</h2>
       <button type="button" className="icon" aria-label="Close dialog" onClick={() => close()}><Icon name="close" size={18} /></button>
     </header>
     <form onSubmit={event => {
@@ -420,9 +423,15 @@ function ThemeActionDialog({ action, theme, close, confirm }) {
       submit(publishing ? scope === 'organization' ? { organization: true } : { groups } : null);
     }}>
       <div className="theme-dialog-body">
-        <p id="theme-dialog-description">{publishing ? <>Choose where to publish <strong>{theme.name}</strong>.</>
+        <p id="theme-dialog-description">{batch ? (deleting
+          ? 'Deleting these themes is permanent and removes any publications.'
+          : 'These themes will be removed from their current audiences.')
+          : publishing ? <>Choose where to publish <strong>{theme.name}</strong>.</>
           : isDefault ? <>Set another theme as default before deleting <strong>{theme.name}</strong>.</>
           : <>Delete <strong>{theme.name}</strong>? This action cannot be undone.</>}</p>
+        {batch?.skipped > 0 && <p className="field-note">{deleting
+          ? 'The default theme will be kept.'
+          : `${batch.skipped} ${batch.skipped === 1 ? 'selected theme is' : 'selected themes are'} already unpublished.`}</p>}
         {!publishing && !isDefault && currentAudience && <p className="field-note">Deleting this theme also removes its publication.</p>}
         {publishing && <>
           {currentAudience && <p className="field-note">Current audience: {currentAudience}</p>}
@@ -442,7 +451,7 @@ function ThemeActionDialog({ action, theme, close, confirm }) {
       <footer className="theme-dialog-footer">
         {publishing && theme.status === 'Published' && <button type="button" className="dialog-unpublish" onClick={() => submit(null)}>Unpublish</button>}
         <button type="button" className="dialog-cancel" ref={cancel} onClick={() => close()}>{!publishing && isDefault ? 'Close' : 'Cancel'}</button>
-        {(publishing || !isDefault) && <button type="submit" className={publishing ? 'primary' : 'dialog-danger'} disabled={publishing && scope === 'groups' && !groups.length}>{publishing ? 'Publish' : 'Delete'}</button>}
+        {(publishing || !isDefault) && <button type="submit" className={deleting ? 'dialog-danger' : 'primary'} disabled={publishing && scope === 'groups' && !groups.length}>{actionLabel}</button>}
       </footer>
     </form>
   </dialog>;
@@ -459,7 +468,7 @@ function ThemePageSize({ size, change }) {
 
   useLayoutEffect(() => {
     if (!open) return;
-    menu.current.firstElementChild.focus();
+    menu.current.querySelector('[aria-checked="true"]')?.focus();
     function dismissOutside(event) {
       if (!container.current.contains(event.target)) setOpen(false);
     }
@@ -505,8 +514,8 @@ function ThemePageSize({ size, change }) {
     <div id={menuId} className="page-size-menu" role="menu" aria-label="Themes per page"
       ref={menu} hidden={!open} onKeyDown={handleMenuKey}>
       {themePageSizes.map(option => <button type="button" key={option} role="menuitemradio"
-        aria-checked={size === option} tabIndex={-1} onClick={() => { change(option); closeMenu(); }}>
-        {option}{size === option && <Icon name="success" size={14} />}
+        aria-checked={size === option} tabIndex={-1} onClick={() => { if (option !== size) change(option); closeMenu(); }}>
+        {option}
       </button>)}
     </div>
   </div>;
@@ -522,6 +531,7 @@ function ThemeList({ themes, update, notify }) {
   const [dialog, setDialog] = useState(null);
   const dialogTrigger = React.useRef(null);
   const addTheme = React.useRef(null);
+  const selectPage = React.useRef(null);
   const menuId = React.useId();
   const results = themes.filter(theme => [theme.name, theme.description, theme.status, audienceLabel(theme)].some(value => value?.toLowerCase().includes(query.trim().toLowerCase())))
     .sort((a, b) => Number(b.type === 'Default') - Number(a.type === 'Default') || a.name.localeCompare(b.name) * (ascending ? 1 : -1));
@@ -529,6 +539,14 @@ function ThemeList({ themes, update, notify }) {
   const visible = results.slice(start, start + size);
   const rangeWidth = String(results.length).length * 3 + 5;
   const allSelected = visible.length > 0 && visible.every(theme => selected.includes(theme.id));
+  const someSelected = !allSelected && visible.some(theme => selected.includes(theme.id));
+  const selectedThemes = themes.filter(theme => selected.includes(theme.id));
+  const deletable = selectedThemes.filter(theme => theme.type !== 'Default');
+  const published = selectedThemes.filter(theme => theme.status === 'Published');
+
+  useLayoutEffect(() => {
+    selectPage.current.indeterminate = someSelected;
+  }, [someSelected]);
 
   useEffect(() => {
     if (!menu) return;
@@ -595,9 +613,26 @@ function ThemeList({ themes, update, notify }) {
     return true;
   }
 
+  function openBatch(operation, targets, trigger) {
+    dialogTrigger.current = trigger;
+    setMenu(null);
+    setDialog({ action: operation, batch: {
+      ids: new Set(targets.map(theme => theme.id)),
+      count: targets.length,
+      skipped: selectedThemes.length - targets.length,
+    } });
+  }
+
   function confirmAction(audience) {
-    const { action: operation, theme } = dialog;
-    if (operation === 'delete') {
+    const { action: operation, theme, batch } = dialog;
+    if (batch) {
+      const deleting = operation === 'delete';
+      if (!update(items => deleting
+        ? items.filter(item => item.type === 'Default' || !batch.ids.has(item.id))
+        : items.map(item => batch.ids.has(item.id) ? { ...item, audience: null, status: 'Not published' } : item))) return false;
+      setSelected([]);
+      notify(`${batch.count} ${batch.count === 1 ? 'theme' : 'themes'} ${deleting ? 'deleted' : 'unpublished'}`, 'neutral');
+    } else if (operation === 'delete') {
       if (theme.type === 'Default' || !update(items => items.filter(item => item.id !== theme.id))) return false;
       setSelected(ids => ids.filter(id => id !== theme.id));
       notify('Theme deleted', 'neutral');
@@ -609,16 +644,24 @@ function ThemeList({ themes, update, notify }) {
   }
 
   return <section className="themes" aria-label="Themes">
-    <Search value={query} change={value => { setQuery(value); setIndex(0); setMenu(null); }} label="Search Theme Name, Description, Status" />
+    <Search value={query} change={value => { setQuery(value); setIndex(0); setMenu(null); setSelected([]); }} label="Search Theme Name, Description, Status" />
     <div className="table-card">
       <div className="table-title">
         <div className="table-title-label">
           <h2>Themes</h2>
-          <span>{results.length} total{selected.length > 0 && ` · ${selected.length} selected`}</span>
+          <span aria-live="polite">{results.length} total{selected.length > 0 && ` · ${selected.length} selected`}</span>
         </div>
-        <button ref={addTheme} className="primary create-theme" type="button" onClick={() => go('create')}>
+        {selected.length > 0 ? <div className="theme-bulk-actions" role="group" aria-label="Selected theme actions">
+          <button type="button" onClick={() => { setSelected([]); selectPage.current.focus(); }}>Clear selection</button>
+          <button type="button" disabled={!published.length} onClick={event => openBatch('unpublish', published, event.currentTarget)}>
+            <Icon name="unpublish" size={16} /> Unpublish
+          </button>
+          <button type="button" className="theme-bulk-delete" disabled={!deletable.length} onClick={event => openBatch('delete', deletable, event.currentTarget)}>
+            <Icon name="delete-outline" size={16} /> Delete
+          </button>
+        </div> : <button ref={addTheme} className="primary create-theme" type="button" onClick={() => go('create')}>
           <Icon name="add" size={16} /> Create theme
-        </button>
+        </button>}
       </div>
       <div className="table-scroll" style={{ '--theme-row-count': Math.min(size, results.length) }}><table>
         <colgroup>
@@ -626,7 +669,7 @@ function ThemeList({ themes, update, notify }) {
           {[.32, .27, .15, .26].map(share => <col key={share} style={{ width: `calc((100% - var(--theme-edge-columns)) * ${share})` }} />)}
           <col className="theme-actions-column" />
         </colgroup>
-        <thead><tr><th><input type="checkbox" aria-label="Select all themes on this page" checked={allSelected} onChange={() => setSelected(ids => allSelected ? ids.filter(id => !visible.some(theme => theme.id === id)) : [...new Set([...ids, ...visible.map(theme => theme.id)])])} /></th><th aria-sort={ascending ? 'ascending' : 'descending'}><button onClick={() => { setAscending(!ascending); setIndex(0); setMenu(null); }}>Theme Name <Icon name={ascending ? 'ascending' : 'descending'} size={16} className="muted" /></button></th><th>Description</th><th>Theme Type</th><th>Status</th><th aria-label="Actions" /></tr></thead>
+        <thead><tr><th><input ref={selectPage} type="checkbox" aria-label="Select all themes on this page" disabled={!visible.length} checked={allSelected} onChange={() => setSelected(ids => allSelected ? ids.filter(id => !visible.some(theme => theme.id === id)) : [...new Set([...ids, ...visible.map(theme => theme.id)])])} /></th><th aria-sort={ascending ? 'ascending' : 'descending'}><button onClick={() => { setAscending(!ascending); setIndex(0); setMenu(null); }}>Theme Name <Icon name={ascending ? 'ascending' : 'descending'} size={16} className="muted" /></button></th><th>Description</th><th>Theme Type</th><th>Status</th><th aria-label="Actions" /></tr></thead>
         <tbody>{visible.map(item => <tr key={item.id} className={selected.includes(item.id) ? 'theme-row selected' : 'theme-row'} onClick={event => {
           if (!event.target.closest('a, button, input, .row-actions') && !window.getSelection()?.toString()) go(`edit/${item.id}`);
         }}>
@@ -688,7 +731,10 @@ function setWidgetDragImage(event) {
 function WidgetIcon({ widget }) {
   const { brand, format = 'svg', id, icon, featured, tile } = widget;
   if (brand) {
-    return <img className={`widget-brand-icon brand-${brand}${format === 'png' ? ' widget-brand-raster' : ''}`} src={`/widget-brands/${brand}.${format}`} alt="" draggable={false} width="26" height="26" />;
+    const fullBleed = format === 'png' || brand === 'adobe-acrobat' || brand.startsWith('trimble-apps/');
+    return <span className={`widget-icon widget-icon-brand${brand === 'amazon-music' ? ' widget-icon-amazon' : ''}${fullBleed ? ' widget-icon-full-bleed' : ''}`} aria-hidden="true">
+      <img src={`/widget-brands/${brand}.${format}`} alt="" draggable={false} />
+    </span>;
   }
   const appearance = tile ? `widget-tile-${tile}` : featured ? 'widget-featured' : `widget-${id}`;
   return <span className={`widget-icon ${appearance}`} aria-hidden="true">{icon && <Icon name={icon} size={18} />}</span>;
@@ -700,13 +746,24 @@ function widgetSearchKey(text) {
 
 function WidgetLibrary({ choose, selected, placed = [], searchRef }) {
   const [query, setQuery] = useState('');
+  const [scrolling, setScrolling] = useState(false);
+  const scrollbarTimeout = React.useRef(null);
   const search = widgetSearchKey(query);
   const matching = libraryWidgets.filter(({ name, aliases = [] }) =>
     [name, ...aliases].some(label => widgetSearchKey(label).includes(search)),
   );
+
+  useEffect(() => () => window.clearTimeout(scrollbarTimeout.current), []);
+
+  function showScrollbar() {
+    setScrolling(true);
+    window.clearTimeout(scrollbarTimeout.current);
+    scrollbarTimeout.current = window.setTimeout(() => setScrolling(false), 700);
+  }
+
   return <aside className="library" aria-label="Widget library" ref={searchRef}>
     <Search value={query} change={setQuery} label="Search widgets" />
-    <div className="widget-list">
+    <div className={`widget-list${scrolling ? ' is-scrolling' : ''}`} role="region" aria-label="Widget results" tabIndex={0} onScroll={showScrollbar}>
       {matching.map(widget => {
         const { name, id } = widget;
         const isPlaced = placed.includes(id);
@@ -770,6 +827,7 @@ function WidgetPreviewHeading({ tab }) {
       <ol>
         <li>Choose a widget layout above the tablet.</li>
         <li>Drag a widget from the library into a slot, or select a slot and choose a widget from the library.</li>
+        {tab === 'Driving Screen' && <li>Drag a placed widget to another slot to rearrange the screen.</li>}
         <li>Switch between landscape and portrait to preview the layout.</li>
       </ol>
       <p>To remove a widget, drag it outside the tablet or select its × button.</p>
@@ -861,6 +919,17 @@ function WallpaperSettings({ draft, select, upload, feedback, loading, orientati
 }
 
 const slotMotion = { duration: 240, easing: 'cubic-bezier(.22, .75, .3, 1)' };
+
+function widgetOrderForMove(slots, count, from, to) {
+  const order = Array.from({ length: count }, (_, index) => index);
+  if (slots[to] == null) {
+    [order[from], order[to]] = [order[to], order[from]];
+  } else {
+    order.splice(from, 1);
+    order.splice(to, 0, from);
+  }
+  return order;
+}
 
 function slotFrame(left, top, width, height, opacity = 1) {
   return { left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${height}px`, opacity };
@@ -994,6 +1063,7 @@ function Editor({ theme, save }) {
   const [target, setTarget] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const [draggedSlot, setDraggedSlot] = useState(null);
+  const [reorderPreview, setReorderPreview] = useState(null);
   const [error, setError] = useState(false);
   const library = React.useRef(null);
   const widgetGrid = React.useRef(null);
@@ -1005,6 +1075,7 @@ function Editor({ theme, save }) {
   const canSubmit = !wallpaperLoading && (!theme || hasThemeChanges(draft, { ...blank(), ...theme }));
   const screen = draft.screens[tab] || { layout: 0, slots: [] };
   const slotCount = layoutSlotCounts[screen.layout];
+  const isReordering = tab === 'Driving Screen' && draggedSlot !== null;
   const patch = (key, value) => setDraft(current => ({ ...current, [key]: value }));
   const updateScreen = (value) => patch('screens', { ...draft.screens, [tab]: { ...screen, ...value } });
   useLayoutEffect(() => {
@@ -1085,8 +1156,81 @@ function Editor({ theme, save }) {
       !event.target.closest('.tablet');
   }
 
+  function isReorderDrag(event) {
+    return isReordering && event.dataTransfer.types.includes(placedWidgetDragType);
+  }
+
+  function previewWidgetMove(index) {
+    if (index === (reorderPreview?.index ?? draggedSlot)) return;
+    if (index === draggedSlot) {
+      setReorderPreview(null);
+      return;
+    }
+
+    const slots = [...widgetGrid.current.querySelectorAll(':scope > .slot:not(.slot-exit)')];
+    const order = widgetOrderForMove(screen.slots, slotCount, draggedSlot, index);
+    const styles = [];
+    order.forEach((from, to) => {
+      if (from === to || from === draggedSlot) return;
+      const source = slots[from].getBoundingClientRect();
+      const destination = slots[to].getBoundingClientRect();
+      styles[from] = {
+        translate: `${destination.left - source.left}px ${destination.top - source.top}px`,
+        '--reorder-width': `${destination.width - source.width}px`,
+        '--reorder-height': `${destination.height - source.height}px`,
+      };
+    });
+    setReorderPreview({ index, styles });
+  }
+
+  function highlightDropSlot(event, index) {
+    if (isReorderDrag(event)) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      previewWidgetMove(index);
+      return;
+    }
+    if (!event.dataTransfer.types.includes(widgetDragType)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+    if (dropTarget?.index === index) return;
+
+    const { left, top, width, height } = event.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, (event.clientX - left) / width * 100));
+    const y = Math.max(0, Math.min(100, (event.clientY - top) / height * 100));
+    setDropTarget(current => current?.index === index ? current : { index, x: `${x}%`, y: `${y}%` });
+  }
+
+  function finishWidgetDrag() {
+    setDropTarget(null);
+    setDraggedSlot(null);
+    setReorderPreview(null);
+  }
+
+  function dropOnSlot(event, index) {
+    if (isReorderDrag(event)) {
+      event.preventDefault();
+      if (index !== draggedSlot && event.dataTransfer.getData(placedWidgetDragType) === String(draggedSlot)) {
+        const order = widgetOrderForMove(screen.slots, slotCount, draggedSlot, index);
+        const visibleSlots = order.map(position => screen.slots[position] ?? null);
+        updateScreen({ slots: [...visibleSlots, ...screen.slots.slice(slotCount)] });
+        setTarget(null);
+      }
+      finishWidgetDrag();
+      return;
+    }
+    setDropTarget(null);
+    if (!event.dataTransfer.types.includes(widgetDragType)) return;
+    event.preventDefault();
+    const value = event.dataTransfer.getData(widgetDragType);
+    if (/^\d+$/.test(value) && widgets[Number(value)]) assign(Number(value), index);
+  }
+
   return <form className="editor" onSubmit={submit}
     onDragOver={event => {
+      if (isReorderDrag(event) && !widgetGrid.current?.contains(event.target) && reorderPreview) {
+        setReorderPreview(null);
+      }
       if (!isRemovalDrop(event)) return;
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
@@ -1095,15 +1239,20 @@ function Editor({ theme, save }) {
       if (!isRemovalDrop(event)) return;
       event.preventDefault();
       assign(null, draggedSlot);
-      setDraggedSlot(null);
+      finishWidgetDrag();
     }}
-    onDragEnd={() => { setDropTarget(null); setDraggedSlot(null); }}>
-    {draggedSlot !== null && <div className="widget-removal-hint" role="status">Drop outside the tablet to remove the widget</div>}
+    onDragEnd={finishWidgetDrag}>
+    {draggedSlot !== null && <div className="widget-removal-hint" role="status">
+      {isReordering && 'Drop in another slot to move the widget. '}
+      Drop outside the tablet to remove it.
+    </div>}
     <div className="editor-bar">
-      <ThemeTabs activeTab={tab} onChange={label => { setTab(label); setTarget(null); }} />
-      <div className="editor-actions">
-        <button type="button" className="editor-cancel" onClick={cancel}>Cancel</button>
-        <button type="submit" className="primary" disabled={!canSubmit}>{theme ? 'Save' : 'Create'}</button>
+      <div className="editor-toolbar">
+        <ThemeTabs activeTab={tab} onChange={label => { setTab(label); setTarget(null); }} />
+        <div className="editor-actions">
+          <button type="button" className="editor-cancel" onClick={cancel}>Cancel</button>
+          <button type="submit" className="primary" disabled={!canSubmit}>{theme ? 'Save' : 'Create'}</button>
+        </div>
       </div>
     </div>
     <section className="editor-panel" role="tabpanel" aria-label={tab}>
@@ -1142,45 +1291,44 @@ function Editor({ theme, save }) {
       {tab.endsWith('Screen') &&
         <div className="editor-grid">
           <Tablet orientation={orientation} driving={tab === 'Driving Screen'} wallpaper={draft}>
-            {tab === 'Driving Screen' && <div className="driving-nav"><div><Icon name="home" />Home</div><div><Icon name="hours" />HOS</div><div><Icon name="navigation" /><abbr title="Navigation">NAV</abbr></div></div>}
-            <div className={`slots layout-${screen.layout}`} ref={widgetGrid}>{Array.from({ length: slotCount }, (_, i) => {
+            {tab === 'Driving Screen' && <div className="driving-nav"><div><Icon name="home" />Home</div><div><Icon name="hours" />HOS</div><div><Icon name="navigation" className="driving-nav-arrow" /><abbr title="Navigation">NAV</abbr></div></div>}
+            <div className={`slots layout-${screen.layout}${isReordering ? ' reordering' : ''}`} ref={widgetGrid}
+              onDragLeave={event => {
+                if (!isReordering || event.currentTarget.contains(event.relatedTarget)) return;
+                const { left, top, right, bottom } = event.currentTarget.getBoundingClientRect();
+                if (event.clientX < left || event.clientX >= right || event.clientY < top || event.clientY >= bottom) {
+                  setReorderPreview(null);
+                }
+              }}>{Array.from({ length: slotCount }, (_, i) => {
               const widget = widgets[screen.slots[i]];
-              const canDrop = dropTarget === i;
-              return <div className={`slot${i === target ? ' target' : ''}${canDrop ? ' drop-target' : ''}`} key={i}
-                onDragOver={event => {
-                  if (!event.dataTransfer.types.includes(widgetDragType)) return;
-                  event.preventDefault();
-                  event.dataTransfer.dropEffect = 'copy';
-                  setDropTarget(i);
-                }}
+              const canDrop = dropTarget?.index === i;
+              const isReorderDestination = isReordering && i === (reorderPreview?.index ?? draggedSlot);
+              return <div className={`slot${i === target ? ' target' : ''}${canDrop ? ' drop-target' : ''}${isReorderDestination ? ' reorder-target' : ''}`} key={i}
+                style={canDrop ? { '--drop-x': dropTarget.x, '--drop-y': dropTarget.y } : undefined}
+                onDragEnter={event => highlightDropSlot(event, i)}
+                onDragOver={event => highlightDropSlot(event, i)}
                 onDragLeave={event => {
                   if (!event.currentTarget.contains(event.relatedTarget)) {
-                    setDropTarget(current => current === i ? null : current);
+                    setDropTarget(current => current?.index === i ? null : current);
                   }
                 }}
-                onDrop={event => {
-                  setDropTarget(null);
-                  if (!event.dataTransfer.types.includes(widgetDragType)) return;
-                  event.preventDefault();
-                  const value = event.dataTransfer.getData(widgetDragType);
-                  if (/^\d+$/.test(value) && widgets[Number(value)]) assign(Number(value), i);
-                }}>
-                <button type="button" draggable={widget != null}
-                  className={draggedSlot === i ? 'dragging-widget' : undefined}
-                  onDragStart={event => {
-                    if (widget == null) return;
-                    event.dataTransfer.effectAllowed = 'move';
-                    event.dataTransfer.setData(placedWidgetDragType, String(i));
-                    setWidgetDragImage(event);
-                    setDraggedSlot(i);
-                  }}
-                  onClick={() => { setTarget(i); library.current?.querySelector('input')?.focus(); }}>
-                  {widget?.brand || widget?.tile
-                    ? <WidgetIcon widget={widget} />
-                    : <Icon name={widget == null ? 'add' : 'widgets'} />}
-                  {canDrop ? 'Drop Widget' : widget?.name ?? 'Add Widget'}
-                </button>
-                {widget != null && <button className="remove" type="button" aria-label={`Remove ${widget.name}`} onClick={() => assign(null, i)}><Icon name="close" size={16} /></button>}
+                onDrop={event => dropOnSlot(event, i)}>
+                <div className={`slot-widget${draggedSlot === i ? ' dragging-widget' : ''}${reorderPreview?.styles[i] ? ' shifting-widget' : ''}`} style={reorderPreview?.styles[i]}>
+                  <button type="button" draggable={widget != null}
+                    onDragStart={event => {
+                      if (widget == null) return;
+                      event.dataTransfer.effectAllowed = 'move';
+                      event.dataTransfer.setData(placedWidgetDragType, String(i));
+                      setWidgetDragImage(event);
+                      layoutAnimations.current.forEach(animation => animation.cancel());
+                      setDraggedSlot(i);
+                    }}
+                    onClick={() => { setTarget(i); library.current?.querySelector('input')?.focus(); }}>
+                    {widget ? <WidgetIcon widget={widget} /> : <Icon name="add" />}
+                    {canDrop ? 'Drop Widget' : widget?.name ?? 'Add Widget'}
+                  </button>
+                  {widget != null && <button className="remove" type="button" aria-label={`Remove ${widget.name}`} onClick={() => assign(null, i)}><Icon name="close" size={16} /></button>}
+                </div>
               </div>;
             })}</div>
           </Tablet>

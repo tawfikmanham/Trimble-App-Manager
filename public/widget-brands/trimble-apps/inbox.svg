@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="88" height="88" viewBox="0 0 88 88">
+  <title>Inbox</title>
+  <rect width="88" height="88" rx="8" fill="#fff"/>
+  <path fill="#0063a3" d="M18.875 19H29.125v5.5H24.5v39h39v-39h-4.625V19h10.25v50h-50.25z"/>
+  <path fill="#0063a3" d="M31.5 31.375h25L44 54.4z"/>
+</svg>

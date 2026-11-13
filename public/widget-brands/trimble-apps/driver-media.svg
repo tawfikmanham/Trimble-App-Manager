@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="88" height="88" viewBox="0 0 88 88">
+  <title>Driver Media</title>
+  <rect width="88" height="88" rx="8" fill="#fff"/>
+  <g transform="translate(6.6 6.6) scale(.85)">
+    <circle cx="44" cy="44" r="27.7" fill="none" stroke="#0064a3" stroke-width="6.1"/>
+    <path fill="#0064a3" d="M34.5 30.25 62 44 34.5 57.75z"/>
+  </g>
+</svg>

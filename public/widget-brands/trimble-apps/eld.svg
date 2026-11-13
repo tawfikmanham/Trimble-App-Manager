@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="88" height="88" viewBox="0 0 88 88">
+  <title>ELD</title>
+  <rect width="88" height="88" rx="8" fill="#fff"/>
+  <g transform="translate(6.6 6.6) scale(.85)">
+    <path fill="#0064a3" fill-rule="evenodd" d="M44 13.25a30.75 30.75 0 1 1 0 61.5 30.75 30.75 0 0 1 0-61.5z
+      M19.5 41.125a24.67 24.67 0 0 1 49 0z
+      M19.55 47.125a24.65 24.65 0 0 0 12.5 18.45l9.15-18.45z
+      M46.8 47.125l9.15 18.45a24.65 24.65 0 0 0 12.5-18.45z"/>
+  </g>
+</svg>

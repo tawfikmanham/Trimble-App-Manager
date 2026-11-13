@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="88" height="88" viewBox="0 0 88 88">
+  <title>Workflow</title>
+  <rect width="88" height="88" rx="8" fill="#fff"/>
+  <g transform="translate(6.6 6.6) scale(.85)">
+    <path fill="#0064a3" fill-rule="evenodd" d="M13.25 13.25h61.5v40H54.625L44 74.75l-10.625-21.5H13.25z
+      M19.625 19.625h48.75v28.25H57.8a15.4 15.4 0 1 0-27.6 0H19.625z
+      M44 33.25a7.75 7.75 0 1 0 0 15.5 7.75 7.75 0 0 0 0-15.5z"/>
+  </g>
+</svg>
