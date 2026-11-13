@@ -502,7 +502,6 @@ tbody tr.selected:focus-within { background-color: #dbeaf5; }
 .driver-avatar { margin-inline-start: auto; flex: none; border-radius: 50%; object-fit: cover; }
 .tablet-content { flex: 1; min-height: 0; display: flex; gap: 6px; padding: 6px; }
 .driving-content { padding: 0; gap: 0; }
-.driving-content .slots { margin: 6px; }
 .driving-nav {
   flex: 0 0 clamp(32px, 7.5cqw, 42px);
   min-width: 0;
@@ -521,7 +520,7 @@ tbody tr.selected:focus-within { background-color: #dbeaf5; }
   border-block-start: 1px solid #515367;
 }
 .slots { position: relative; display: grid; flex: 1; min-width: 0; grid-auto-rows: minmax(0, 1fr); gap: 1.3cqw; }
-.driving-content .slots.layout-4 {
+.driving-content .slots {
   --slot-gap: clamp(4px, 1cqw, 8px);
   gap: var(--slot-gap);
   margin: var(--slot-gap);

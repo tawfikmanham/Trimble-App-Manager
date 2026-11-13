@@ -14,7 +14,7 @@ Keep widget remove buttons square with equal top and right insets. Show a distin
 
 Support removing placed widgets by dragging them from the tablet onto the surrounding editor workspace. Keep the remove button available for click and keyboard use.
 
-On Driving Screen, move placed widgets by dragging them to a different slot. Preview the intervening widgets shifting when the destination is occupied, and apply the order on drop. Use the same gutter for rows, columns, and outer insets in the six-slot layout.
+On Driving Screen, move placed widgets by dragging them to a different slot. Preview the intervening widgets shifting when the destination is occupied, and apply the order on drop. Use the same gutter for rows, columns, and outer insets across all Driving Screen layouts.
 
 Reveal the green drop highlight from the point where a widget drag enters the slot. Keep the origin fixed until the drag leaves the slot. Use a soft edge during the reveal and a solid green fill across the entire slot when it finishes. Show the solid fill immediately with reduced motion.
 
